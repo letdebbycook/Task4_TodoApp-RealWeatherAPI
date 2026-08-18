@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXCLUSIVE TODO</title>
+    <link rel="icon" href="assets/to-do-list.png">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Tasks</h1>
+            <p class="subtitle">Stay organized, stay creative.</p>
+        </header>
+
+        <main class="app-main">
+            <div class="input-container">
+                <input type="text" id="todo-input" class="todo-input" placeholder="What needs to be done? (Press Enter)"
+                    autocomplete="off">
+            </div>
+
+            <div class="filters">
+                <button type="button" class="filter-btn active" data-filter="all">All</button>
+                <button type="button" class="filter-btn" data-filter="active">Active</button>
+                <button type="button" class="filter-btn" data-filter="completed">Completed</button>
+            </div>
+
+            <ul id="todo-list" class="todo-list">
+                <!-- Todo items rendered by JavaScript -->
+            </ul>
+
+            <div class="app-footer">
+                <span id="items-left">0 items left</span>
+                <span class="hint">Double-click to edit. Drag to reorder.</span>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
