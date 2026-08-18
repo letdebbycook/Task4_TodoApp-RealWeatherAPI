@@ -3,8 +3,6 @@
 // ============================================================
 class WeatherWidget {
     constructor() {
-        // 🔑 Replace with your own OpenWeatherMap API key
-        // Get one for free at: https://openweathermap.org/api
         this.API_KEY = 'fdaf53a2e9c12ebb37ddd6d28f524558';
         this.CITY = 'Jakarta';
         this.API_URL = `https://api.openweathermap.org/data/2.5/weather?q=${this.CITY}&appid=${this.API_KEY}&units=metric&lang=id`;
@@ -17,6 +15,7 @@ class WeatherWidget {
         this.errorEl = document.getElementById('weather-error');
         this.dataEl = document.getElementById('weather-data');
         this.errorMsgEl = document.getElementById('weather-error-msg');
+        this.errorDetailsEl = document.getElementById('weather-error-details');
         this.retryBtn = document.getElementById('weather-retry-btn');
 
         // Data elements
@@ -55,21 +54,64 @@ class WeatherWidget {
     async fetchWeather() {
         this.setState('loading');
 
+        console.group(`[Weather API Debug Log - ${new Date().toLocaleTimeString()}]`);
+        console.log('📍 Target URL:', this.API_URL);
+        console.log('🌐 Browser Status:', navigator.onLine ? 'Online (Terhubung)' : 'Offline (Tidak Terhubung)');
+
+        if (!navigator.onLine) {
+            const offlineError = new Error('Browser Offline: Perangkat tidak terhubung ke jaringan internet.');
+            this.handleWeatherError('NETWORK_OFFLINE', offlineError, {
+                mainMsg: 'Tidak Ada Koneksi Internet',
+                details: 'Browser mendeteksi mode offline. Periksa Wi-Fi atau koneksi data seluler Anda.',
+                recommendation: 'Hubungkan ke internet lalu tekan "Coba Lagi".'
+            });
+            console.groupEnd();
+            return;
+        }
+
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+            const timeoutMs = 8000;
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
             const response = await fetch(this.API_URL, { signal: controller.signal });
             clearTimeout(timeoutId);
 
+            console.log(`📡 Response HTTP Status: ${response.status} (${response.statusText || 'OK'})`);
+
             if (!response.ok) {
+                let errorReason = '';
+                let recommendation = '';
+
                 if (response.status === 401) {
-                    throw new Error('API key tidak valid. Ganti API_KEY di script.js');
+                    errorReason = '401 Unauthorized: API Key tidak valid atau belum diaktivasi oleh OpenWeatherMap (butuh ~1-2 jam untuk registrasi key baru).';
+                    recommendation = 'Periksa API Key di script.js atau pastikan key sudah aktif di dashboard OpenWeatherMap.';
+                } else if (response.status === 404) {
+                    errorReason = `404 Not Found: Kota '${this.CITY}' tidak ditemukan di database OpenWeatherMap.`;
+                    recommendation = 'Periksa ejaan nama kota pada API_URL.';
+                } else if (response.status === 429) {
+                    errorReason = '429 Too Many Requests: Batas kuota panggilan API gratis (60/min) telah terlampaui.';
+                    recommendation = 'Tunggu beberapa menit sebelum mencoba kembali.';
+                } else if (response.status >= 500) {
+                    errorReason = `HTTP ${response.status} Server Error: Server OpenWeatherMap sedang bermasalah.`;
+                    recommendation = 'Coba beberapa saat lagi.';
+                } else {
+                    errorReason = `HTTP Error ${response.status}: ${response.statusText}`;
+                    recommendation = 'Terjadi masalah pada respon server cuaca.';
                 }
-                throw new Error(`HTTP Error: ${response.status}`);
+
+                throw {
+                    isHttpError: true,
+                    status: response.status,
+                    statusText: response.statusText,
+                    reason: errorReason,
+                    recommendation
+                };
             }
 
             const data = await response.json();
+            console.log('✅ Data cuaca berhasil dimuat:', data);
+            console.groupEnd();
 
             // Cache the successful response
             this.cacheWeather(data);
@@ -77,18 +119,54 @@ class WeatherWidget {
             // Render
             this.render(data);
         } catch (error) {
-            console.error('Weather fetch error:', error);
+            let errorType = 'FETCH_ERROR';
+            let mainMsg = 'Gagal memuat data cuaca';
+            let details = '';
+            let rec = '';
 
-            // Try loading from cache as fallback
-            const cached = this.getCachedWeather();
-            if (cached) {
-                console.log('Using cached weather data');
-                this.render(cached, true);
+            if (error.name === 'AbortError') {
+                errorType = 'TIMEOUT_ERROR';
+                mainMsg = 'Koneksi Timeout (8 Detik)';
+                details = 'Permintaan ke API OpenWeatherMap melebihi batas waktu 8 detik.';
+                rec = 'Jaringan internet lambat atau server tidak merespon.';
+            } else if (error.isHttpError) {
+                errorType = `HTTP_${error.status}`;
+                mainMsg = `Error HTTP ${error.status}`;
+                details = error.reason;
+                rec = error.recommendation;
             } else {
-                this.showError(error.name === 'AbortError'
-                    ? 'Koneksi timeout. Periksa internet.'
-                    : error.message || 'Gagal memuat data cuaca');
+                // Fetch failed (Network/CORS/AdBlocker/SSL/DNS)
+                errorType = 'NETWORK_OR_CORS_ERROR';
+                mainMsg = 'Gagal terhubung ke web API';
+                details = `Tidak dapat terhubung ke server cuaca (${error.message || 'TypeError: Failed to fetch'}).`;
+                rec = 'Kemungkinan penyebab: AdBlocker / Ekstensi Privasi blocking `api.openweathermap.org`, Firewall/Proxy, atau Sertifikat SSL/DNS bermasalah.';
             }
+
+            this.handleWeatherError(errorType, error, { mainMsg, details, rec });
+            console.groupEnd();
+        }
+    }
+
+    handleWeatherError(type, errorObj, info) {
+        const { mainMsg, details, rec } = info;
+
+        console.error(`❌ [Weather API Diagnosis Log - ${type}]`, {
+            timestamp: new Date().toISOString(),
+            mainMessage: mainMsg,
+            details: details,
+            recommendation: rec,
+            browserOnline: navigator.onLine,
+            apiUrl: this.API_URL,
+            errorObject: errorObj
+        });
+
+        // Try loading from cache as fallback
+        const cached = this.getCachedWeather();
+        if (cached) {
+            console.warn('⚠️ Koneksi web gagal. Menggunakan data cuaca dari cache lokal.');
+            this.render(cached, true);
+        } else {
+            this.showError(mainMsg, `${details} ${rec}`);
         }
     }
 
@@ -107,7 +185,7 @@ class WeatherWidget {
         this.humidityEl.textContent = `${humidity}%`;
         this.windEl.textContent = `${windSpeed} m/s`;
         this.feelsEl.textContent = `${feelsLike}°C`;
-        this.iconEl.src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+        this.iconEl.src = this.getWeatherIconUrl(iconCode);
         this.iconEl.alt = description;
 
         // Update timestamp
@@ -141,8 +219,12 @@ class WeatherWidget {
         }
     }
 
-    showError(message) {
+    showError(message, details = '') {
         this.errorMsgEl.textContent = message;
+        if (this.errorDetailsEl) {
+            this.errorDetailsEl.textContent = details;
+            this.errorDetailsEl.style.display = details ? 'block' : 'none';
+        }
         this.setState('error');
     }
 
@@ -174,6 +256,35 @@ class WeatherWidget {
 
     capitalizeFirst(str) {
         return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    getWeatherIconUrl(iconCode) {
+        const iconMap = {
+            '01d': 'clear-day.svg',
+            '01n': 'clear-night.svg',
+            '02d': 'partly-cloudy-day.svg',
+            '02n': 'partly-cloudy-night.svg',
+            '03d': 'cloudy.svg',
+            '03n': 'cloudy.svg',
+            '04d': 'overcast-day.svg',
+            '04n': 'overcast-night.svg',
+            '09d': 'rain.svg',
+            '09n': 'rain.svg',
+            '10d': 'partly-cloudy-day-rain.svg',
+            '10n': 'partly-cloudy-night-rain.svg',
+            '11d': 'thunderstorms-rain.svg',
+            '11n': 'thunderstorms-rain.svg',
+            '13d': 'snow.svg',
+            '13n': 'snow.svg',
+            '50d': 'mist.svg',
+            '50n': 'mist.svg'
+        };
+
+        const svgName = iconMap[iconCode];
+        if (svgName) {
+            return `https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${svgName}`;
+        }
+        return `https://openweathermap.org/img/wn/${iconCode}@4x.png`;
     }
 
     startAutoRefresh() {
@@ -399,7 +510,8 @@ class TodoApp {
             // Delete button
             const delBtn = document.createElement('button');
             delBtn.className = 'todo-delete';
-            delBtn.innerHTML = '&#10005;'; // X mark
+            delBtn.setAttribute('aria-label', 'Delete task');
+            delBtn.innerHTML = '<svg class="todo-delete-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
             delBtn.addEventListener('click', () => this.handleDelete(todo.id, li));
 
             // Drag events
