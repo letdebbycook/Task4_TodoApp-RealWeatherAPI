@@ -4,14 +4,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EXCLUSIVE TODO</title>
+    <meta name="description" content="Exclusive Todo App with real-time Jakarta weather integration. Stay organized and stay informed about Jakarta's current weather conditions.">
+    <title>EXCLUSIVE TODO — Jakarta Weather</title>
     <link rel="icon" href="assets/to-do-list.png">
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <div class="app-container">
+
+        <!-- Weather Widget -->
+        <section id="weather-widget" class="weather-widget" aria-label="Jakarta Weather">
+            <!-- Loading State -->
+            <div id="weather-loading" class="weather-loading">
+                <div class="weather-shimmer-row">
+                    <div class="shimmer shimmer-icon"></div>
+                    <div class="shimmer-text-group">
+                        <div class="shimmer shimmer-line shimmer-wide"></div>
+                        <div class="shimmer shimmer-line shimmer-narrow"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="weather-error" class="weather-error" style="display: none;">
+                <span class="weather-error-icon">⚠️</span>
+                <div class="weather-error-content">
+                    <span id="weather-error-msg" class="weather-error-msg">Gagal memuat cuaca</span>
+                    <button id="weather-retry-btn" class="weather-retry-btn" type="button">Coba Lagi</button>
+                </div>
+            </div>
+
+            <!-- Data State -->
+            <div id="weather-data" class="weather-data" style="display: none;">
+                <div class="weather-main">
+                    <img id="weather-icon" class="weather-icon" src="" alt="Weather icon">
+                    <div class="weather-temp-group">
+                        <span id="weather-temp" class="weather-temp">--°C</span>
+                        <span id="weather-desc" class="weather-desc">Loading...</span>
+                    </div>
+                </div>
+                <div class="weather-details">
+                    <div class="weather-detail-item" title="Kelembapan">
+                        <span class="weather-detail-icon">💧</span>
+                        <span id="weather-humidity" class="weather-detail-value">--%</span>
+                    </div>
+                    <div class="weather-detail-item" title="Kecepatan Angin">
+                        <span class="weather-detail-icon">🌬️</span>
+                        <span id="weather-wind" class="weather-detail-value">-- m/s</span>
+                    </div>
+                    <div class="weather-detail-item" title="Terasa Seperti">
+                        <span class="weather-detail-icon">🌡️</span>
+                        <span id="weather-feels" class="weather-detail-value">--°C</span>
+                    </div>
+                </div>
+                <div class="weather-footer">
+                    <span class="weather-location">📍 Jakarta, ID</span>
+                    <span id="weather-updated" class="weather-updated">Updated: --:--</span>
+                </div>
+            </div>
+        </section>
+
         <header class="app-header">
             <h1>Tasks</h1>
             <p class="subtitle">Stay organized, stay creative.</p>
