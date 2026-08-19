@@ -1,102 +1,82 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Exclusive Todo App with real-time Jakarta weather integration. Stay organized and stay informed about Jakarta's current weather conditions.">
-    <title>EXCLUSIVE TODO — Jakarta Weather</title>
+    <meta name="description" content="Aplikasi To-Do Minimalis Editorial dengan Integrasi Cuaca Real-Time.">
+    <title>ToDo App</title>
     <link rel="icon" href="assets/to-do-list.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <div class="app-container">
 
-        <!-- Weather Widget -->
-        <section id="weather-widget" class="weather-widget" aria-label="Jakarta Weather">
-            <!-- Loading State -->
+        <header class="editorial-masthead">
+            <div class="masthead-meta">
+                <span id="current-date" class="date-tag"></span>
+            </div>
+            <h1 class="editorial-title">Daftar Tugas</h1>
+        </header>
+
+        <section id="weather-widget" class="weather-widget" aria-label="Informasi Cuaca Jakarta">
             <div id="weather-loading" class="weather-loading">
-                <div class="weather-shimmer-row">
-                    <div class="shimmer shimmer-icon"></div>
-                    <div class="shimmer-text-group">
-                        <div class="shimmer shimmer-line shimmer-wide"></div>
-                        <div class="shimmer shimmer-line shimmer-narrow"></div>
-                    </div>
-                </div>
+                <div class="weather-shimmer-line"></div>
             </div>
 
-            <!-- Error State -->
             <div id="weather-error" class="weather-error" style="display: none;">
-                <svg class="weather-error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ff4757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <div class="weather-error-content">
-                    <span id="weather-error-msg" class="weather-error-msg">Gagal memuat cuaca</span>
-                    <div id="weather-error-details" class="weather-error-details" style="display: none;"></div>
-                    <button id="weather-retry-btn" class="weather-retry-btn" type="button">
-                        <svg class="weather-retry-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> Coba Lagi
-                    </button>
-                </div>
+                <span id="weather-error-msg" class="weather-error-msg">Gagal memuat status cuaca</span>
+                <div id="weather-error-details" class="weather-error-details" style="display: none;"></div>
+                <button id="weather-retry-btn" class="weather-retry-btn" type="button">Coba Lagi</button>
             </div>
 
-            <!-- Data State -->
             <div id="weather-data" class="weather-data" style="display: none;">
-                <div class="weather-main">
-                    <img id="weather-icon" class="weather-icon" src="https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/clear-day.svg" alt="Weather icon">
-                    <div class="weather-temp-group">
-                        <span id="weather-temp" class="weather-temp">--°C</span>
-                        <span id="weather-desc" class="weather-desc">Loading...</span>
+                <div class="weather-inline-main">
+                    <img id="weather-icon" class="weather-icon-mono" src="https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/clear-day.svg" alt="Cuaca">
+                    <div class="weather-summary-text">
+                        <span class="weather-headline">
+                            <strong>Hari ini di Jakarta:</strong> <span id="weather-temp">--°C</span> / <span id="weather-desc">Loading...</span>. <span id="weather-recommendation" class="weather-recommendation"></span>
+                        </span>
+                        <div class="weather-metrics">
+                            <span>Lembap: <strong id="weather-humidity">--%</strong></span>
+                            <span class="sep">•</span>
+                            <span>Angin: <strong id="weather-wind">-- m/s</strong></span>
+                            <span class="sep">•</span>
+                            <span>Terasa: <strong id="weather-feels">--°C</strong></span>
+                            <span class="sep">•</span>
+                            <span id="weather-updated" class="weather-updated">Updated: --:--</span>
+                        </div>
                     </div>
-                </div>
-                <div class="weather-details">
-                    <div class="weather-detail-item" title="Kelembapan">
-                        <svg class="weather-detail-icon icon-humidity" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4facfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
-                        <span id="weather-humidity" class="weather-detail-value">--%</span>
-                    </div>
-                    <div class="weather-detail-item" title="Kecepatan Angin">
-                        <svg class="weather-detail-icon icon-wind" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#a8c0ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
-                        <span id="weather-wind" class="weather-detail-value">-- m/s</span>
-                    </div>
-                    <div class="weather-detail-item" title="Terasa Seperti">
-                        <svg class="weather-detail-icon icon-feels" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ff758c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
-                        <span id="weather-feels" class="weather-detail-value">--°C</span>
-                    </div>
-                </div>
-                <div class="weather-footer">
-                    <span class="weather-location">
-                        <svg class="weather-location-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ff4757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Jakarta, ID
-                    </span>
-                    <span id="weather-updated" class="weather-updated">Updated: --:--</span>
                 </div>
             </div>
         </section>
 
-        <header class="app-header">
-            <h1>Tasks</h1>
-            <p class="subtitle">Stay organized, stay creative.</p>
-        </header>
-
         <main class="app-main">
             <div class="input-container">
-                <input type="text" id="todo-input" class="todo-input" placeholder="What needs to be done? (Press Enter)"
-                    autocomplete="off">
+                <input type="text" id="todo-input" class="todo-input" placeholder="+ Tambahkan tugas baru lalu tekan Enter" autocomplete="off">
             </div>
 
-            <div class="filters">
-                <button type="button" class="filter-btn active" data-filter="all">All</button>
-                <button type="button" class="filter-btn" data-filter="active">Active</button>
-                <button type="button" class="filter-btn" data-filter="completed">Completed</button>
+            <div class="editorial-toolbar">
+                <div class="filters">
+                    <button type="button" class="filter-btn active" data-filter="all">Semua</button>
+                    <button type="button" class="filter-btn" data-filter="active">Aktif</button>
+                    <button type="button" class="filter-btn" data-filter="completed">Selesai</button>
+                </div>
+                <span id="items-left" class="items-count">0 tugas tersisa</span>
             </div>
 
             <ul id="todo-list" class="todo-list">
-                <!-- Todo items rendered by JavaScript -->
             </ul>
 
-            <div class="app-footer">
-                <span id="items-left">0 items left</span>
-                <span class="hint">Double-click to edit. Drag to reorder.</span>
-            </div>
+            <footer class="app-footer">
+                <span class="hint">Klik 2x untuk menyunting • Geser untuk mengatur urutan</span>
+            </footer>
         </main>
+
     </div>
 
     <script src="script.js"></script>

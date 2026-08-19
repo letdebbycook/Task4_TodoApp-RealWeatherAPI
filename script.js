@@ -1,15 +1,11 @@
-// ============================================================
-// Weather Widget — Real-time Jakarta Weather via OpenWeatherMap
-// ============================================================
 class WeatherWidget {
     constructor() {
         this.API_KEY = 'fdaf53a2e9c12ebb37ddd6d28f524558';
         this.CITY = 'Jakarta';
         this.API_URL = `https://api.openweathermap.org/data/2.5/weather?q=${this.CITY}&appid=${this.API_KEY}&units=metric&lang=id`;
-        this.REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+        this.REFRESH_INTERVAL = 10 * 60 * 1000;
         this.CACHE_KEY = 'weatherCache_jakarta';
 
-        // DOM Elements
         this.widget = document.getElementById('weather-widget');
         this.loadingEl = document.getElementById('weather-loading');
         this.errorEl = document.getElementById('weather-error');
@@ -18,7 +14,6 @@ class WeatherWidget {
         this.errorDetailsEl = document.getElementById('weather-error-details');
         this.retryBtn = document.getElementById('weather-retry-btn');
 
-        // Data elements
         this.iconEl = document.getElementById('weather-icon');
         this.tempEl = document.getElementById('weather-temp');
         this.descEl = document.getElementById('weather-desc');
@@ -31,32 +26,23 @@ class WeatherWidget {
     }
 
     init() {
-        // Retry button
-        this.retryBtn.addEventListener('click', () => this.fetchWeather());
-
-        // Initial fetch
+        if (this.retryBtn) {
+            this.retryBtn.addEventListener('click', () => this.fetchWeather());
+        }
         this.fetchWeather();
-
-        // Auto-refresh
         this.startAutoRefresh();
     }
 
     setState(state) {
-        // state: 'loading' | 'data' | 'error'
-        this.loadingEl.style.display = state === 'loading' ? 'flex' : 'none';
-        this.dataEl.style.display = state === 'data' ? 'flex' : 'none';
-        this.errorEl.style.display = state === 'error' ? 'flex' : 'none';
+        if (this.loadingEl) this.loadingEl.style.display = state === 'loading' ? 'flex' : 'none';
+        if (this.dataEl) this.dataEl.style.display = state === 'data' ? 'flex' : 'none';
+        if (this.errorEl) this.errorEl.style.display = state === 'error' ? 'flex' : 'none';
 
-        // Animate widget class for color theming
-        this.widget.classList.remove('weather--warm', 'weather--cool', 'weather--storm');
+        if (this.widget) this.widget.classList.remove('weather--warm', 'weather--cool', 'weather--storm');
     }
 
     async fetchWeather() {
         this.setState('loading');
-
-        console.group(`[Weather API Debug Log - ${new Date().toLocaleTimeString()}]`);
-        console.log('📍 Target URL:', this.API_URL);
-        console.log('🌐 Browser Status:', navigator.onLine ? 'Online (Terhubung)' : 'Offline (Tidak Terhubung)');
 
         if (!navigator.onLine) {
             const offlineError = new Error('Browser Offline: Perangkat tidak terhubung ke jaringan internet.');
@@ -65,7 +51,6 @@ class WeatherWidget {
                 details: 'Browser mendeteksi mode offline. Periksa Wi-Fi atau koneksi data seluler Anda.',
                 recommendation: 'Hubungkan ke internet lalu tekan "Coba Lagi".'
             });
-            console.groupEnd();
             return;
         }
 
@@ -77,20 +62,18 @@ class WeatherWidget {
             const response = await fetch(this.API_URL, { signal: controller.signal });
             clearTimeout(timeoutId);
 
-            console.log(`📡 Response HTTP Status: ${response.status} (${response.statusText || 'OK'})`);
-
             if (!response.ok) {
                 let errorReason = '';
                 let recommendation = '';
 
                 if (response.status === 401) {
-                    errorReason = '401 Unauthorized: API Key tidak valid atau belum diaktivasi oleh OpenWeatherMap (butuh ~1-2 jam untuk registrasi key baru).';
+                    errorReason = '401 Unauthorized: API Key tidak valid atau belum diaktivasi oleh OpenWeatherMap.';
                     recommendation = 'Periksa API Key di script.js atau pastikan key sudah aktif di dashboard OpenWeatherMap.';
                 } else if (response.status === 404) {
                     errorReason = `404 Not Found: Kota '${this.CITY}' tidak ditemukan di database OpenWeatherMap.`;
                     recommendation = 'Periksa ejaan nama kota pada API_URL.';
                 } else if (response.status === 429) {
-                    errorReason = '429 Too Many Requests: Batas kuota panggilan API gratis (60/min) telah terlampaui.';
+                    errorReason = '429 Too Many Requests: Batas kuota panggilan API gratis telah terlampaui.';
                     recommendation = 'Tunggu beberapa menit sebelum mencoba kembali.';
                 } else if (response.status >= 500) {
                     errorReason = `HTTP ${response.status} Server Error: Server OpenWeatherMap sedang bermasalah.`;
@@ -110,13 +93,7 @@ class WeatherWidget {
             }
 
             const data = await response.json();
-            console.log('✅ Data cuaca berhasil dimuat:', data);
-            console.groupEnd();
-
-            // Cache the successful response
             this.cacheWeather(data);
-
-            // Render
             this.render(data);
         } catch (error) {
             let errorType = 'FETCH_ERROR';
@@ -135,7 +112,6 @@ class WeatherWidget {
                 details = error.reason;
                 rec = error.recommendation;
             } else {
-                // Fetch failed (Network/CORS/AdBlocker/SSL/DNS)
                 errorType = 'NETWORK_OR_CORS_ERROR';
                 mainMsg = 'Gagal terhubung ke web API';
                 details = `Tidak dapat terhubung ke server cuaca (${error.message || 'TypeError: Failed to fetch'}).`;
@@ -143,27 +119,13 @@ class WeatherWidget {
             }
 
             this.handleWeatherError(errorType, error, { mainMsg, details, rec });
-            console.groupEnd();
         }
     }
 
     handleWeatherError(type, errorObj, info) {
         const { mainMsg, details, rec } = info;
-
-        console.error(`❌ [Weather API Diagnosis Log - ${type}]`, {
-            timestamp: new Date().toISOString(),
-            mainMessage: mainMsg,
-            details: details,
-            recommendation: rec,
-            browserOnline: navigator.onLine,
-            apiUrl: this.API_URL,
-            errorObject: errorObj
-        });
-
-        // Try loading from cache as fallback
         const cached = this.getCachedWeather();
         if (cached) {
-            console.warn('⚠️ Koneksi web gagal. Menggunakan data cuaca dari cache lokal.');
             this.render(cached, true);
         } else {
             this.showError(mainMsg, `${details} ${rec}`);
@@ -179,38 +141,52 @@ class WeatherWidget {
         const windSpeed = data.wind.speed;
         const weatherId = data.weather[0].id;
 
-        // Update DOM
-        this.tempEl.textContent = `${temp}°C`;
-        this.descEl.textContent = this.capitalizeFirst(description);
-        this.humidityEl.textContent = `${humidity}%`;
-        this.windEl.textContent = `${windSpeed} m/s`;
-        this.feelsEl.textContent = `${feelsLike}°C`;
-        this.iconEl.src = this.getWeatherIconUrl(iconCode);
-        this.iconEl.alt = description;
+        if (this.tempEl) this.tempEl.textContent = `${temp}°C`;
+        if (this.descEl) this.descEl.textContent = this.capitalizeFirst(description);
+        if (this.humidityEl) this.humidityEl.textContent = `${humidity}%`;
+        if (this.windEl) this.windEl.textContent = `${windSpeed} m/s`;
+        if (this.feelsEl) this.feelsEl.textContent = `${feelsLike}°C`;
+        if (this.iconEl) {
+            this.iconEl.src = this.getWeatherIconUrl(iconCode);
+            this.iconEl.alt = description;
+        }
 
-        // Update timestamp
+        const recEl = document.getElementById('weather-recommendation');
+        if (recEl) {
+            let recommendation = "Disarankan selesaikan tugas secara efisien.";
+            if (weatherId >= 200 && weatherId < 600) {
+                recommendation = "Disarankan selesaikan tugas indoor.";
+            } else if (weatherId >= 600 && weatherId < 700) {
+                recommendation = "Cuaca sejuk & salju, fokus tugas prioritas.";
+            } else if (temp >= 32) {
+                recommendation = "Suhu terik, prioritaskan tugas berpendingin udara.";
+            } else if (temp >= 24 && temp < 32) {
+                recommendation = "Kondisi mendukung untuk fokus kerja produktif.";
+            }
+            recEl.textContent = recommendation;
+        }
+
         const now = new Date();
         const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        this.updatedEl.textContent = isCached
-            ? `Cache: ${timeStr}`
-            : `Updated: ${timeStr}`;
-
-        // Apply weather theme
-        this.applyWeatherTheme(weatherId, temp);
+        if (this.updatedEl) {
+            this.updatedEl.textContent = isCached
+                ? `Cache: ${timeStr}`
+                : `Updated: ${timeStr}`;
+        }
 
         this.setState('data');
 
-        // Entrance animation
-        this.dataEl.classList.remove('weather-fade-in');
-        void this.dataEl.offsetWidth; // trigger reflow
-        this.dataEl.classList.add('weather-fade-in');
+        if (this.dataEl) {
+            this.dataEl.classList.remove('weather-fade-in');
+            void this.dataEl.offsetWidth;
+            this.dataEl.classList.add('weather-fade-in');
+        }
     }
 
     applyWeatherTheme(weatherId, temp) {
+        if (!this.widget) return;
         this.widget.classList.remove('weather--warm', 'weather--cool', 'weather--storm');
-
         if (weatherId >= 200 && weatherId < 600) {
-            // Rain or thunderstorm
             this.widget.classList.add('weather--storm');
         } else if (temp >= 30) {
             this.widget.classList.add('weather--warm');
@@ -220,7 +196,7 @@ class WeatherWidget {
     }
 
     showError(message, details = '') {
-        this.errorMsgEl.textContent = message;
+        if (this.errorMsgEl) this.errorMsgEl.textContent = message;
         if (this.errorDetailsEl) {
             this.errorDetailsEl.textContent = details;
             this.errorDetailsEl.style.display = details ? 'block' : 'none';
@@ -235,7 +211,6 @@ class WeatherWidget {
                 timestamp: Date.now()
             }));
         } catch (e) {
-            console.warn('Failed to cache weather data:', e);
         }
     }
 
@@ -243,13 +218,11 @@ class WeatherWidget {
         try {
             const cached = JSON.parse(localStorage.getItem(this.CACHE_KEY));
             if (cached && cached.data) {
-                // Accept cache up to 30 minutes old
                 if (Date.now() - cached.timestamp < 30 * 60 * 1000) {
                     return cached.data;
                 }
             }
         } catch (e) {
-            console.warn('Failed to read weather cache:', e);
         }
         return null;
     }
@@ -292,10 +265,6 @@ class WeatherWidget {
     }
 }
 
-
-// ============================================================
-// Sound Player — Web Audio API for Todo interactions
-// ============================================================
 class SoundPlayer {
     constructor() {
         this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -335,31 +304,26 @@ class SoundPlayer {
     }
 }
 
-
-// ============================================================
-// Todo App — Core Task Manager
-// ============================================================
 class TodoApp {
     constructor() {
         this.todos = JSON.parse(localStorage.getItem('todos')) || [];
-        this.filter = 'all'; // all, active, completed
+        this.filter = 'all';
         this.soundPlayer = new SoundPlayer();
 
-        // DOM Elements
         this.todoInput = document.getElementById('todo-input');
         this.todoList = document.getElementById('todo-list');
         this.itemsLeft = document.getElementById('items-left');
         this.filterBtns = document.querySelectorAll('.filter-btn');
 
-        // Drag state
         this.draggedItemIndex = null;
 
         this.init();
     }
 
     init() {
-        // Event Listeners
-        this.todoInput.addEventListener('keydown', this.handleAdd.bind(this));
+        if (this.todoInput) {
+            this.todoInput.addEventListener('keydown', this.handleAdd.bind(this));
+        }
 
         this.filterBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -394,13 +358,13 @@ class TodoApp {
     }
 
     handleDelete(id, li) {
-        li.style.animation = 'slideOut 0.3s ease forwards';
+        li.style.animation = 'slideOut 0.2s ease forwards';
         this.soundPlayer.playDelete();
         setTimeout(() => {
             this.todos = this.todos.filter(t => t.id !== id);
             this.save();
             this.render();
-        }, 300); // wait for animation
+        }, 200);
     }
 
     handleToggle(id) {
@@ -429,11 +393,9 @@ class TodoApp {
         }
     }
 
-    // Drag and Drop Handlers
     handleDragStart(e, index) {
         this.draggedItemIndex = index;
         e.dataTransfer.effectAllowed = 'move';
-        // Need setTimeout to allow visual feedback before opacity drops
         setTimeout(() => e.target.classList.add('dragging'), 0);
     }
 
@@ -441,15 +403,13 @@ class TodoApp {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
 
-        // Simple reordering logic
         if (this.draggedItemIndex === null || this.draggedItemIndex === index) return;
 
-        // Swap in array
         const draggedItem = this.todos.splice(this.draggedItemIndex, 1)[0];
         this.todos.splice(index, 0, draggedItem);
         this.draggedItemIndex = index;
 
-        this.render(); // Re-render immediately for visual feedback
+        this.render();
     }
 
     handleDragEnd(e) {
@@ -460,6 +420,7 @@ class TodoApp {
     }
 
     render() {
+        if (!this.todoList) return;
         this.todoList.innerHTML = '';
 
         let filteredTodos = this.todos;
@@ -474,14 +435,17 @@ class TodoApp {
             li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
             li.draggable = true;
 
-            // Checkbox
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'todo-checkbox';
             checkbox.checked = todo.completed;
             checkbox.addEventListener('change', () => this.handleToggle(todo.id));
 
-            // Text container
+            const weatherTag = document.createElement('span');
+            weatherTag.className = 'task-weather-icon';
+            weatherTag.setAttribute('title', 'Tenggat hari ini — Terintegrasi dengan kondisi cuaca');
+            weatherTag.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
+
             const textContainer = document.createElement('div');
             textContainer.className = 'todo-text-container';
 
@@ -496,7 +460,6 @@ class TodoApp {
             textContainer.appendChild(textSpan);
             textContainer.appendChild(editInput);
 
-            // Double click to edit
             textSpan.addEventListener('dblclick', () => this.handleEditStart(li, todo, textSpan, editInput));
             editInput.addEventListener('blur', () => this.handleEditEnd(li, todo, editInput));
             editInput.addEventListener('keydown', (e) => {
@@ -507,36 +470,38 @@ class TodoApp {
                 }
             });
 
-            // Delete button
             const delBtn = document.createElement('button');
             delBtn.className = 'todo-delete';
-            delBtn.setAttribute('aria-label', 'Delete task');
+            delBtn.setAttribute('aria-label', 'Hapus tugas');
             delBtn.innerHTML = '<svg class="todo-delete-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
             delBtn.addEventListener('click', () => this.handleDelete(todo.id, li));
 
-            // Drag events
             li.addEventListener('dragstart', (e) => this.handleDragStart(e, index));
             li.addEventListener('dragover', (e) => this.handleDragOver(e, index));
             li.addEventListener('dragend', (e) => this.handleDragEnd(e));
 
             li.appendChild(checkbox);
+            li.appendChild(weatherTag);
             li.appendChild(textContainer);
             li.appendChild(delBtn);
 
             this.todoList.appendChild(li);
         });
 
-        // Update items left
-        const activeCount = this.todos.filter(t => !t.completed).length;
-        this.itemsLeft.textContent = `${activeCount} item${activeCount !== 1 ? 's' : ''} left`;
+        if (this.itemsLeft) {
+            const activeCount = this.todos.filter(t => !t.completed).length;
+            this.itemsLeft.textContent = `${activeCount} tugas tersisa`;
+        }
     }
 }
 
-
-// ============================================================
-// Initialize on DOM Load
-// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    const currentDateEl = document.getElementById('current-date');
+    if (currentDateEl) {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        currentDateEl.textContent = new Date().toLocaleDateString('id-ID', options).toUpperCase();
+    }
+
     new WeatherWidget();
     new TodoApp();
 });
