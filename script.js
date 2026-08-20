@@ -1,10 +1,8 @@
 class WeatherWidget {
     constructor() {
         this.API_KEY = 'fdaf53a2e9c12ebb37ddd6d28f524558';
-        this.CITY = 'Jakarta';
-        this.API_URL = `https://api.openweathermap.org/data/2.5/weather?q=${this.CITY}&appid=${this.API_KEY}&units=metric&lang=id`;
+        this.currentCity = localStorage.getItem('weatherCity') || 'Jakarta';
         this.REFRESH_INTERVAL = 10 * 60 * 1000;
-        this.CACHE_KEY = 'weatherCache_jakarta';
 
         this.widget = document.getElementById('weather-widget');
         this.loadingEl = document.getElementById('weather-loading');
@@ -13,6 +11,10 @@ class WeatherWidget {
         this.errorMsgEl = document.getElementById('weather-error-msg');
         this.errorDetailsEl = document.getElementById('weather-error-details');
         this.retryBtn = document.getElementById('weather-retry-btn');
+
+        this.searchForm = document.getElementById('weather-search-form');
+        this.cityInput = document.getElementById('weather-city-input');
+        this.cityNameEl = document.getElementById('weather-city-name');
 
         this.iconEl = document.getElementById('weather-icon');
         this.tempEl = document.getElementById('weather-temp');
@@ -26,10 +28,25 @@ class WeatherWidget {
     }
 
     init() {
-        if (this.retryBtn) {
-            this.retryBtn.addEventListener('click', () => this.fetchWeather());
+        if (this.searchForm) {
+            this.searchForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const query = this.cityInput ? this.cityInput.value.trim() : '';
+                if (query) {
+                    this.fetchWeather(query);
+                }
+            });
         }
-        this.fetchWeather();
+
+        if (this.retryBtn) {
+            this.retryBtn.addEventListener('click', () => this.fetchWeather(this.currentCity));
+        }
+
+        if (this.cityInput) {
+            this.cityInput.value = this.currentCity;
+        }
+
+        this.fetchWeather(this.currentCity);
         this.startAutoRefresh();
     }
 
@@ -41,8 +58,9 @@ class WeatherWidget {
         if (this.widget) this.widget.classList.remove('weather--warm', 'weather--cool', 'weather--storm');
     }
 
-    async fetchWeather() {
+    async fetchWeather(targetCity = this.currentCity) {
         this.setState('loading');
+        const cityToFetch = targetCity.trim() || 'Jakarta';
 
         if (!navigator.onLine) {
             const offlineError = new Error('Browser Offline: Perangkat tidak terhubung ke jaringan internet.');
@@ -50,7 +68,7 @@ class WeatherWidget {
                 mainMsg: 'Tidak Ada Koneksi Internet',
                 details: 'Browser mendeteksi mode offline. Periksa Wi-Fi atau koneksi data seluler Anda.',
                 recommendation: 'Hubungkan ke internet lalu tekan "Coba Lagi".'
-            });
+            }, cityToFetch);
             return;
         }
 
@@ -59,7 +77,9 @@ class WeatherWidget {
             const timeoutMs = 8000;
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-            const response = await fetch(this.API_URL, { signal: controller.signal });
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityToFetch)}&appid=${this.API_KEY}&units=metric&lang=id`;
+
+            const response = await fetch(apiUrl, { signal: controller.signal });
             clearTimeout(timeoutId);
 
             if (!response.ok) {
@@ -70,8 +90,8 @@ class WeatherWidget {
                     errorReason = '401 Unauthorized: API Key tidak valid atau belum diaktivasi oleh OpenWeatherMap.';
                     recommendation = 'Periksa API Key di script.js atau pastikan key sudah aktif di dashboard OpenWeatherMap.';
                 } else if (response.status === 404) {
-                    errorReason = `404 Not Found: Kota '${this.CITY}' tidak ditemukan di database OpenWeatherMap.`;
-                    recommendation = 'Periksa ejaan nama kota pada API_URL.';
+                    errorReason = `Kota "${cityToFetch}" tidak ditemukan.`;
+                    recommendation = 'Periksa kembali ejaan nama kota (contoh: Jakarta, Bandung, Surabaya, Tokyo, London).';
                 } else if (response.status === 429) {
                     errorReason = '429 Too Many Requests: Batas kuota panggilan API gratis telah terlampaui.';
                     recommendation = 'Tunggu beberapa menit sebelum mencoba kembali.';
@@ -93,7 +113,14 @@ class WeatherWidget {
             }
 
             const data = await response.json();
-            this.cacheWeather(data);
+            this.currentCity = data.name || cityToFetch;
+            localStorage.setItem('weatherCity', this.currentCity);
+
+            if (this.cityInput) {
+                this.cityInput.value = this.currentCity;
+            }
+
+            this.cacheWeather(this.currentCity, data);
             this.render(data);
         } catch (error) {
             let errorType = 'FETCH_ERROR';
@@ -108,7 +135,7 @@ class WeatherWidget {
                 rec = 'Jaringan internet lambat atau server tidak merespon.';
             } else if (error.isHttpError) {
                 errorType = `HTTP_${error.status}`;
-                mainMsg = `Error HTTP ${error.status}`;
+                mainMsg = error.status === 404 ? `Kota tidak ditemukan` : `Error HTTP ${error.status}`;
                 details = error.reason;
                 rec = error.recommendation;
             } else {
@@ -118,13 +145,13 @@ class WeatherWidget {
                 rec = 'Kemungkinan penyebab: AdBlocker / Ekstensi Privasi blocking `api.openweathermap.org`, Firewall/Proxy, atau Sertifikat SSL/DNS bermasalah.';
             }
 
-            this.handleWeatherError(errorType, error, { mainMsg, details, rec });
+            this.handleWeatherError(errorType, error, { mainMsg, details, rec }, cityToFetch);
         }
     }
 
-    handleWeatherError(type, errorObj, info) {
+    handleWeatherError(type, errorObj, info, targetCity) {
         const { mainMsg, details, rec } = info;
-        const cached = this.getCachedWeather();
+        const cached = this.getCachedWeather(targetCity);
         if (cached) {
             this.render(cached, true);
         } else {
@@ -140,7 +167,10 @@ class WeatherWidget {
         const humidity = data.main.humidity;
         const windSpeed = data.wind.speed;
         const weatherId = data.weather[0].id;
+        const cityName = data.name;
+        const country = data.sys && data.sys.country ? `, ${data.sys.country}` : '';
 
+        if (this.cityNameEl) this.cityNameEl.textContent = `${cityName}${country}`;
         if (this.tempEl) this.tempEl.textContent = `${temp}°C`;
         if (this.descEl) this.descEl.textContent = this.capitalizeFirst(description);
         if (this.humidityEl) this.humidityEl.textContent = `${humidity}%`;
@@ -174,6 +204,7 @@ class WeatherWidget {
                 : `Updated: ${timeStr}`;
         }
 
+        this.applyWeatherTheme(weatherId, temp);
         this.setState('data');
 
         if (this.dataEl) {
@@ -204,9 +235,10 @@ class WeatherWidget {
         this.setState('error');
     }
 
-    cacheWeather(data) {
+    cacheWeather(cityName, data) {
         try {
-            localStorage.setItem(this.CACHE_KEY, JSON.stringify({
+            const cacheKey = `weatherCache_${cityName.toLowerCase().replace(/\s+/g, '_')}`;
+            localStorage.setItem(cacheKey, JSON.stringify({
                 data,
                 timestamp: Date.now()
             }));
@@ -214,9 +246,10 @@ class WeatherWidget {
         }
     }
 
-    getCachedWeather() {
+    getCachedWeather(cityName) {
         try {
-            const cached = JSON.parse(localStorage.getItem(this.CACHE_KEY));
+            const cacheKey = `weatherCache_${cityName.toLowerCase().replace(/\s+/g, '_')}`;
+            const cached = JSON.parse(localStorage.getItem(cacheKey));
             if (cached && cached.data) {
                 if (Date.now() - cached.timestamp < 30 * 60 * 1000) {
                     return cached.data;

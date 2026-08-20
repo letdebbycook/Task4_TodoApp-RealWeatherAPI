@@ -23,7 +23,18 @@
             <h1 class="editorial-title">Daftar Tugas</h1>
         </header>
 
-        <section id="weather-widget" class="weather-widget" aria-label="Informasi Cuaca Jakarta">
+        <section id="weather-widget" class="weather-widget" aria-label="Informasi Cuaca Kota">
+            <form id="weather-search-form" class="weather-search-form">
+                <div class="weather-search-input-group">
+                    <svg class="weather-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="weather-city-input" class="weather-city-input" placeholder="Cari kota (misal: Bandung, Tokyo, London)..." autocomplete="off">
+                    <button type="submit" id="weather-search-btn" class="weather-search-btn">Cari</button>
+                </div>
+            </form>
+
             <div id="weather-loading" class="weather-loading">
                 <div class="weather-shimmer-line"></div>
             </div>
@@ -39,7 +50,7 @@
                     <img id="weather-icon" class="weather-icon-mono" src="https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/clear-day.svg" alt="Cuaca">
                     <div class="weather-summary-text">
                         <span class="weather-headline">
-                            <strong>Hari ini di Jakarta:</strong> <span id="weather-temp">--°C</span> / <span id="weather-desc">Loading...</span>. <span id="weather-recommendation" class="weather-recommendation"></span>
+                            <strong>Hari ini di <span id="weather-city-name">Jakarta</span>:</strong> <span id="weather-temp">--°C</span> / <span id="weather-desc">Loading...</span>. <span id="weather-recommendation" class="weather-recommendation"></span>
                         </span>
                         <div class="weather-metrics">
                             <span>Lembap: <strong id="weather-humidity">--%</strong></span>
