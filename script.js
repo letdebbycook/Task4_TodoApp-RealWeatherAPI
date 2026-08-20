@@ -183,15 +183,17 @@ class WeatherWidget {
 
         const recEl = document.getElementById('weather-recommendation');
         if (recEl) {
-            let recommendation = "Disarankan selesaikan tugas secara efisien.";
+            let recommendation = "Jaga kesehatan dan tetap semangat beraktivitas!";
             if (weatherId >= 200 && weatherId < 600) {
-                recommendation = "Disarankan selesaikan tugas indoor.";
+                recommendation = "Sedang hujan/badai, siapkan payung atau jas hujan & hati-hati di jalan.";
             } else if (weatherId >= 600 && weatherId < 700) {
-                recommendation = "Cuaca sejuk & salju, fokus tugas prioritas.";
+                recommendation = "Cuaca bersalju, kenakan pakaian hangat dan jaga daya tahan tubuh.";
             } else if (temp >= 32) {
-                recommendation = "Suhu terik, prioritaskan tugas berpendingin udara.";
+                recommendation = "Cuaca cukup terik, perbanyak minum air putih & hindari paparan matahari langsung.";
             } else if (temp >= 24 && temp < 32) {
-                recommendation = "Kondisi mendukung untuk fokus kerja produktif.";
+                recommendation = "Cuaca cerah dan bersahabat, sangat cocok untuk beraktivitas.";
+            } else if (temp < 24) {
+                recommendation = "Udara sejuk & segar, jaga kondisi tubuh agar tetap hangat.";
             }
             recEl.textContent = recommendation;
         }
